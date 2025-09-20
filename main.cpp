@@ -2,17 +2,17 @@
 #include <fstream>
 
 
-int StrEql(const char* s1, const char* s2)
+bool StrEql(const char* s1, const char* s2)
 {
-  int i;
-  int j;
-  for(i = 0, j = 0; s1[i] != '\0' && s2[j] != '\0'; i++, j++) 
+  while(*s1 == *s2 && *s1 != '\0')
   {
-    if(s1[i] != s2[j]) {
-      return 0;
-    }
+    s1++;
+    s2++;
   }
-  return s1[i] == '\0' && s2[j] != '\0';
+  if(*s1 == '\0' && *s2 == '\0'){
+    return true;
+  }
+  return false;
 }
 
 
@@ -22,24 +22,33 @@ bool IsAlpha(char c)
 }
 
 
-char ToLower(char c)
-{
-  if(c >= 'A' && c <= 'Z'){
-    return char(c - 'A' + 'a');
-  }
-  return c;
-}
-
-
 int main(int argc, char** argv) {
-  if(argc < 5 || (!StrEql(argv[1], "--word") && StrEql(argv[1], "--file")) ||  (!StrEql(argv[3], "--word") && StrEql(argv[3], "--file")))
+  char* word = nullptr;
+  char* file_name = nullptr;
+  for(int i = 1; i < argc; i++)
+  {
+    if(StrEql(argv[i-1], "--word")){
+      word = argv[i];
+    }
+    else if(StrEql(argv[i-1], "--file")){
+      file_name = argv[i];
+    }
+  }
+
+  if(word == nullptr || file_name == nullptr)
   {
     std::cout << "Arguments list error" << std::endl;
     return 1;
   }
-  const char* word = argv[2];  //TODO
-  unsigned int mask = 0;
+
+  bool mask[255];
   int letters_count = 0;
+  int count_diff_let = 0;
+
+  for(int i = 0; i < 255; i++)
+  {
+    mask[i] = false;
+  }
 
   for(int i = 0; word[i] != '\0'; i++)
   {
@@ -47,8 +56,9 @@ int main(int argc, char** argv) {
     if(!IsAlpha(c))
     {
       std::cout << "Word must consist only of Latin letters" << std::endl;
+      return 1;
     }
-    mask |= 1 << (c - 'a');
+    mask[c] = true;
     letters_count++;
     if(letters_count > 32)
     {
@@ -57,44 +67,28 @@ int main(int argc, char** argv) {
     }
   }
 
-  std::ifstream input(argv[4]);
+  for(int i = 0; i < 255; i++)
+  {
+    count_diff_let += mask[i];
+  }
+
+  std::ifstream input(file_name);
   if(!input)
   {
     std::cout << "Can't open file" << std::endl;
     return 1;
   }
 
-  unsigned int temp_mask = 0;
-  bool in_word = false;
-  char c;
-  int count;
-  while(input.get(c))
+  char buffer[256];
+  int count = 0;
+  
+  while(input >> buffer)
   {
-    if(c == ' ' || c == '\n')
-    {
-      if(in_word)
-      {
-        if((temp_mask & mask) == mask)
-        { 
-          count++;
-        }
-        temp_mask = 0;
-        in_word = false;
-      }
-    } else{
-      in_word = true;
-      if(IsAlpha(c))
-      {
-        c = ToLower(c);
-        temp_mask |= 1 << (c - 'a');
-      }
+    int count_common_let = 0;
+    for(int i = 0; buffer[i] != '\0'; i++){
+      count_common_let += mask[buffer[i]];
     }
-  }
-
-  if(in_word)
-  {
-    if((temp_mask & mask) == mask) 
-    {
+    if(count_common_let >= count_diff_let){
       count++;
     }
   }
